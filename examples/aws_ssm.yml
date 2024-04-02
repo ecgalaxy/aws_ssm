@@ -1,0 +1,11 @@
+---
+plugin: aws_ssm
+
+keyed_groups:
+  - key: InstanceType
+    prefix: "i"
+  - key: ImageId
+    prefix: "i"
+
+groups:
+  ubuntu: "'Ubuntu' in (PlatformName)"

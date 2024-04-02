@@ -1,0 +1,8 @@
+# Dependencies
+boto3
+
+# Testing
+bandit
+flake8
+pytest
+safety
