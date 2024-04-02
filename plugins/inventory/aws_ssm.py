@@ -33,6 +33,12 @@ DOCUMENTATION = '''
               - If empty, the AWS_REGION or AWS_DEFAULT_REGION environment variable is used.
             type: str
             required: false
+        bucket_name:
+            description:
+              - The name of the S3 bucket used for file transfers.
+              - If empty, defaults to 'ansible-aws-ssm-{AWS account ID}'.
+            type: str
+            required: false
         ec2_group_name:
             description:
               - The name of the EC2 instances group.
@@ -88,8 +94,10 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
     def _populate(self):
 
         region = self.get_option('region')
+        bucket_name = self.get_option('bucket_name')
         aws_region = region if region is not None else os.environ.get('AWS_REGION', os.environ.get('AWS_DEFAULT_REGION', 'us-east-1'))
         aws_account_id = boto3.client('sts', aws_region).get_caller_identity().get('Account')
+        aws_ssm_bucket_name = bucket_name if bucket_name is not None else f'ansible-aws-ssm-{aws_account_id}'
 
         # Get SSM-managed EC2 instances
         managed_instances = self._get_ssm_managed_ec2s(aws_region)
@@ -104,7 +112,15 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
             reservations = client.describe_instances(Filters=filters, InstanceIds=[instance['InstanceId']])['Reservations']
             if len(reservations) == 1:
                 host = instance['InstanceId']
+                end_user = 'ubuntu' if instance['PlatformName'] == 'Ubuntu' else 'admin' if instance['PlatformName'] == 'Debian' else 'ec2-user'
+
                 self.inventory.add_host(host, group=self.get_option('ec2_group_name'))
+                self.inventory.set_variable(host, 'ansible_connection', 'aws_ssm')
+                self.inventory.set_variable(host, 'ansible_aws_ssm_bucket_name', aws_ssm_bucket_name)
+                self.inventory.set_variable(host, 'ansible_end_user', end_user)
+                self.inventory.set_variable(host, 'ansible_become_end_user', end_user)
+                self.inventory.set_variable(host, 'ansible_aws_ssm_region', aws_region)
+
                 instance = instance | reservations[0]['Instances'][0]
                 for tag in instance['Tags']:
                     instance = instance | {tag['Key']: tag['Value']}
@@ -126,6 +142,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
                 host = workspace['UserName'].lower()
                 self.inventory.add_host(host, group=self.get_option('workspace_group_name'))
                 self.inventory.set_variable(host, 'ansible_host', key)
+                self.inventory.set_variable(host, 'ansible_connection', 'aws_ssm')
 
                 # TODO: Decrease the number of API calls
                 tags = client.describe_tags(ResourceId=workspace['WorkspaceId'])['TagList']
