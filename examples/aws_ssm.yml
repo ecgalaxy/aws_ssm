@@ -1,6 +1,10 @@
 ---
 plugin: aws_ssm
 
+managed_instance_profile: instance-profile/my-ssm-profile
+managed_role: service-role/my-ssm-managed-role
+directory_name: acme
+
 keyed_groups:
   - key: InstanceType
     prefix: "i"

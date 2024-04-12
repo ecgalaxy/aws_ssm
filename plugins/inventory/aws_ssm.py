@@ -41,13 +41,13 @@ DOCUMENTATION = '''
             required: false
         ec2_group_name:
             description:
-              - The name of the EC2 instances group.
+              - The name of the generated EC2 instances inventory group.
             type: str
             required: false
             default: 'ec2'
         workspace_group_name:
             description:
-              - The name of the workspaces group.
+              - The name of the generated workspaces inventory group.
             type: str
             required: false
             default: 'workspaces'
@@ -61,6 +61,12 @@ DOCUMENTATION = '''
             description:
                - The name of the role to which the AmazonSSMManagedInstanceCore policy is attached for hybrid activations.
                - If empty, hybrid activations are not used.
+            type: str
+            required: false
+        directory_name:
+            description:
+               - The short name of the AWS Directory used for WorkSpaces.
+               - This helps setting end-user related values.
             type: str
             required: false
 '''
@@ -95,6 +101,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
 
         region = self.get_option('region')
         bucket_name = self.get_option('bucket_name')
+        ds_name = self.get_option('directory_name')
         aws_region = region if region is not None else os.environ.get('AWS_REGION', os.environ.get('AWS_DEFAULT_REGION', 'us-east-1'))
         aws_account_id = boto3.client('sts', aws_region).get_caller_identity().get('Account')
         aws_ssm_bucket_name = bucket_name if bucket_name is not None else f'ansible-aws-ssm-{aws_account_id}'
@@ -143,6 +150,12 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
                 self.inventory.add_host(host, group=self.get_option('workspace_group_name'))
                 self.inventory.set_variable(host, 'ansible_host', key)
                 self.inventory.set_variable(host, 'ansible_connection', 'aws_ssm')
+                self.inventory.set_variable(host, 'ansible_aws_ssm_bucket_name', aws_ssm_bucket_name)
+                domain = f'{ds_name}\\' if ds_name is not None else ''
+                self.inventory.set_variable(host, 'ansible_end_user', f'{domain}{host}')
+                domain = f'@{ds_name}' if ds_name is not None else ''
+                self.inventory.set_variable(host, 'ansible_become_end_user', f'{host}{domain}')
+                self.inventory.set_variable(host, 'ansible_aws_ssm_region', aws_region)
 
                 # TODO: Decrease the number of API calls
                 tags = client.describe_tags(ResourceId=workspace['WorkspaceId'])['TagList']
