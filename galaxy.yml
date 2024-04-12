@@ -1,0 +1,7 @@
+---
+namespace: "ecgalaxy"
+name: "aws_ssm"
+version: "0.1.0"
+readme: "README.md"
+authors:
+    - "ECGALAXY team (https://code.europa.eu/ecgalaxy)"
