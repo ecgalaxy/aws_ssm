@@ -1,5 +1,5 @@
 ---
-plugin: aws_ssm
+plugin: ecgalaxy.aws_ssm.inventory
 
 managed_instance_profile: instance-profile/my-ssm-profile
 managed_role: service-role/my-ssm-managed-role

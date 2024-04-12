@@ -9,7 +9,7 @@ import os
 __metaclass__ = type
 
 DOCUMENTATION = '''
-    name: aws_ssm
+    name: ecgalaxy.aws_ssm.inventory
     author:
         - ecgalaxy
     short_description: Ansible SSM dynamic inventory plugin.
@@ -26,7 +26,7 @@ DOCUMENTATION = '''
             type: str
             required: true
             choices:
-              - aws_ssm
+              - ecgalaxy.aws_ssm.inventory
         region:
             description:
               - The AWS region to use.
@@ -73,7 +73,7 @@ DOCUMENTATION = '''
 
 EXAMPLES = '''
 # aws_ssm.yml
-plugin: aws_ssm
+plugin: ecgalaxy.aws_ssm.inventory
 
 managed_instance_profile: instance-profile/my-ssm-profile
 managed_role: service-role/my-ssm-managed-role
@@ -95,7 +95,7 @@ groups:
 class InventoryModule(BaseInventoryPlugin, Constructable):
     ''' Host inventory parser for Ansible using a SSM source. '''
 
-    NAME = 'aws_ssm'
+    NAME = 'ecgalaxy.aws_ssm.inventory'
 
     def _populate(self):
 
