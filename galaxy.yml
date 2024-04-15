@@ -5,3 +5,9 @@ version: "0.1.0"
 readme: "README.md"
 authors:
     - "ECGALAXY team (https://code.europa.eu/ecgalaxy)"
+license:
+    - "EUPL-1.2"
+tags:
+    - aws
+    - ssm
+repository: "https://code.europa.eu/ecgalaxy/aws_ssm"

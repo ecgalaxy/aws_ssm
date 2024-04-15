@@ -9,7 +9,7 @@ import os
 __metaclass__ = type
 
 DOCUMENTATION = '''
-    name: ecgalaxy.aws_ssm.inventory
+    name: inventory
     author:
         - ecgalaxy
     short_description: Ansible SSM dynamic inventory plugin.
