@@ -33,12 +33,6 @@ DOCUMENTATION = '''
               - If empty, the AWS_REGION or AWS_DEFAULT_REGION environment variable is used.
             type: str
             required: false
-        bucket_name:
-            description:
-              - The name of the S3 bucket used for file transfers.
-              - If empty, defaults to 'ansible-aws-ssm-{AWS account ID}'.
-            type: str
-            required: false
         ec2_group_name:
             description:
               - The name of the generated EC2 instances inventory group.
@@ -66,7 +60,7 @@ DOCUMENTATION = '''
         directory_name:
             description:
                - The short name of the AWS Directory used for WorkSpaces.
-               - This helps setting end-user related values.
+               - This helps setting end-user related values while connecting to the WorkSpace.
             type: str
             required: false
 '''
@@ -75,6 +69,7 @@ EXAMPLES = '''
 # aws_ssm.yml
 plugin: ecgalaxy.aws_ssm.inventory
 
+directory_name: myad
 managed_instance_profile: instance-profile/my-ssm-profile
 managed_role: service-role/my-ssm-managed-role
 
@@ -100,11 +95,9 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
     def _populate(self):
 
         region = self.get_option('region')
-        bucket_name = self.get_option('bucket_name')
         ds_name = self.get_option('directory_name')
         aws_region = region if region is not None else os.environ.get('AWS_REGION', os.environ.get('AWS_DEFAULT_REGION', 'us-east-1'))
         aws_account_id = boto3.client('sts', aws_region).get_caller_identity().get('Account')
-        aws_ssm_bucket_name = bucket_name if bucket_name is not None else f'ansible-aws-ssm-{aws_account_id}'
 
         # Get SSM-managed EC2 instances
         managed_instances = self._get_ssm_managed_ec2s(aws_region)
@@ -123,10 +116,8 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
 
                 self.inventory.add_host(host, group=self.get_option('ec2_group_name'))
                 self.inventory.set_variable(host, 'ansible_connection', 'aws_ssm')
-                self.inventory.set_variable(host, 'ansible_aws_ssm_bucket_name', aws_ssm_bucket_name)
                 self.inventory.set_variable(host, 'ansible_end_user', end_user)
                 self.inventory.set_variable(host, 'ansible_become_end_user', end_user)
-                self.inventory.set_variable(host, 'ansible_aws_ssm_region', aws_region)
 
                 instance = instance | reservations[0]['Instances'][0]
                 for tag in instance['Tags']:
@@ -145,17 +136,14 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
             self.inventory.add_group(self.get_option('workspace_group_name'))
 
             client = boto3.client('workspaces', aws_region)
-            for key, workspace in managed_workspaces.items():
-                host = workspace['UserName'].lower()
+            for host, workspace in managed_workspaces.items():
+                user = workspace['UserName'].lower()
                 self.inventory.add_host(host, group=self.get_option('workspace_group_name'))
-                self.inventory.set_variable(host, 'ansible_host', key)
                 self.inventory.set_variable(host, 'ansible_connection', 'aws_ssm')
-                self.inventory.set_variable(host, 'ansible_aws_ssm_bucket_name', aws_ssm_bucket_name)
                 domain = f'{ds_name}\\' if ds_name is not None else ''
-                self.inventory.set_variable(host, 'ansible_end_user', f'{domain}{host}')
+                self.inventory.set_variable(host, 'ansible_end_user', f'{domain}{user}')
                 domain = f'@{ds_name}' if ds_name is not None else ''
-                self.inventory.set_variable(host, 'ansible_become_end_user', f'{host}{domain}')
-                self.inventory.set_variable(host, 'ansible_aws_ssm_region', aws_region)
+                self.inventory.set_variable(host, 'ansible_become_end_user', f'{user}{domain}')
 
                 # TODO: Decrease the number of API calls
                 tags = client.describe_tags(ResourceId=workspace['WorkspaceId'])['TagList']
